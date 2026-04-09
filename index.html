@@ -8,13 +8,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <style>
-    /* Genel Ayarlar */
     body { 
         font-family: Arial, sans-serif; 
         padding: 20px; 
         background-color: #f9f9f9; 
-        max-width: 900px; /* Bilgisayarda çok yayılmasını engeller */
-        margin: 0 auto; /* Bilgisayarda ortalar */
+        max-width: 900px; 
+        margin: 0 auto; 
     }
     
     h2 { text-align: center; color: #2c3e50; font-size: 1.5em; }
@@ -28,7 +27,6 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
-    /* Gelişmiş Şık Butonları */
     button.opt-btn { 
         display: block; 
         width: 100%; 
@@ -41,7 +39,6 @@
         background-color: #eee; 
         transition: 0.2s; 
         font-size: 1em;
-        /* Mobilde yazının buton dışına taşmasını engeller */
         word-wrap: break-word; 
         white-space: normal; 
     }
@@ -50,7 +47,6 @@
     .correct { background-color: #c8f7c5 !important; border-color: #2ecc71 !important; color: #155724; font-weight: bold;}
     .wrong { background-color: #f7c5c5 !important; border-color: #e74c3c !important; color: #721c24;}
     
-    /* Sayfalandırma */
     .pagination { 
         margin-top: 20px; 
         text-align: center; 
@@ -81,11 +77,10 @@
     
     #loading { text-align: center; font-size: 1.1em; color: #2980b9; font-weight: bold; margin-bottom: 20px; }
 
-    /* MOBİL İÇİN ÖZEL İNCE AYARLAR (Ekran 600px'den küçükse devreye girer) */
     @media (max-width: 600px) {
-        body { padding: 10px; } /* Kenar boşluklarını daralt */
+        body { padding: 10px; } 
         .question { padding: 12px; }
-        button.opt-btn { padding: 10px; font-size: 0.95em; } /* Şıkları biraz daha derli toplu yap */
+        button.opt-btn { padding: 10px; font-size: 0.95em; } 
         #pageInfo { font-size: 0.9em; }
     }
 </style>
@@ -111,6 +106,16 @@ let currentPage = 0;
 const pageSize = 10; 
 
 const pdfFileName = "XML_Web_Services_Midterm_Practice_Weeks_1_7.pdf";
+
+// XML Kodlarını HTML'de düz yazı olarak göstermek için gereken güvenlik filtresi
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+}
 
 window.onload = async function() {
     try {
@@ -193,14 +198,18 @@ function renderPage() {
         const div = document.createElement("div");
         div.className = "question";
 
-        let html = `<b style="font-size:1.1em; color:#2c3e50; display:block; margin-bottom:10px;">${q.id}. ${q.question}</b>`;
+        // Soruyu escapeHTML filtresinden geçirerek yazdırıyoruz
+        const safeQuestion = escapeHTML(q.question);
+        let html = `<b style="font-size:1.1em; color:#2c3e50; display:block; margin-bottom:10px;">${q.id}. ${safeQuestion}</b>`;
 
         html += `<img src="resimler/${q.id}.png" class="question-image" onerror="this.style.display='none'" alt="Soru ${q.id} Görseli">`;
 
         q.options.forEach((opt) => {
             const optLetter = opt.match(/^([A-E])\)/)[1];
+            // Şıkları da escapeHTML filtresinden geçirerek yazdırıyoruz
+            const safeOpt = escapeHTML(opt);
             html += `<button class="opt-btn" onclick="checkAnswer(this, '${optLetter}', '${q.answerKey}')">
-                        ${opt}
+                        ${safeOpt}
                      </button>`;
         });
 
@@ -227,7 +236,9 @@ function checkAnswer(btn, selectedLetter, correctLetter) {
     } else {
         btn.classList.add("wrong");
         siblings.forEach(b => {
-            if(b.innerText.trim().startsWith(correctLetter)) {
+            // escapeHTML nedeniyle b.innerText artık '&lt;a&gt;' şeklinde dönebilir. 
+            // Şıkkın sadece "A)" gibi ilk 2 karakterini kontrol etmek daha güvenli:
+            if(b.innerText.trim().startsWith(correctLetter + ")")) {
                 b.classList.add("correct");
             }
         });
