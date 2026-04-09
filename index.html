@@ -2,31 +2,92 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>XML & Web Services Deneme Sınavı</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; }
-    .question { margin-bottom: 25px; padding: 15px; border: 1px solid #ddd; background-color: white; border-radius: 8px; }
+    /* Genel Ayarlar */
+    body { 
+        font-family: Arial, sans-serif; 
+        padding: 20px; 
+        background-color: #f9f9f9; 
+        max-width: 900px; /* Bilgisayarda çok yayılmasını engeller */
+        margin: 0 auto; /* Bilgisayarda ortalar */
+    }
+    
+    h2 { text-align: center; color: #2c3e50; font-size: 1.5em; }
+    
+    .question { 
+        margin-bottom: 20px; 
+        padding: 15px; 
+        border: 1px solid #ddd; 
+        background-color: white; 
+        border-radius: 8px; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
     
     /* Gelişmiş Şık Butonları */
     button.opt-btn { 
-        display: block; width: 100%; text-align: left; margin: 8px 0; padding: 12px; 
-        cursor: pointer; border: 2px solid #ccc; border-radius: 6px; background-color: #eee; transition: 0.2s; font-size: 1em;
+        display: block; 
+        width: 100%; 
+        text-align: left; 
+        margin: 8px 0; 
+        padding: 12px; 
+        cursor: pointer; 
+        border: 2px solid #ccc; 
+        border-radius: 6px; 
+        background-color: #eee; 
+        transition: 0.2s; 
+        font-size: 1em;
+        /* Mobilde yazının buton dışına taşmasını engeller */
+        word-wrap: break-word; 
+        white-space: normal; 
     }
     button.opt-btn:hover { background-color: #e0e0e0; }
     
     .correct { background-color: #c8f7c5 !important; border-color: #2ecc71 !important; color: #155724; font-weight: bold;}
     .wrong { background-color: #f7c5c5 !important; border-color: #e74c3c !important; color: #721c24;}
     
-    .pagination { margin-top: 20px; text-align: center; }
-    button.page-btn { margin: 5px; padding: 10px 15px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background-color: #2c3e50; color: white; }
+    /* Sayfalandırma */
+    .pagination { 
+        margin-top: 20px; 
+        text-align: center; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        gap: 10px; 
+    }
+    button.page-btn { 
+        padding: 10px 15px; 
+        cursor: pointer; 
+        border: 1px solid #ccc; 
+        border-radius: 4px; 
+        background-color: #2c3e50; 
+        color: white; 
+        font-size: 1em;
+    }
     button.page-btn:hover { background-color: #34495e; }
     
-    .question-image { max-width: 100%; height: auto; margin: 15px 0; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .question-image { 
+        max-width: 100%; 
+        height: auto; 
+        margin: 15px 0; 
+        border: 1px solid #ccc; 
+        border-radius: 4px; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    }
     
-    #loading { text-align: center; font-size: 1.2em; color: #2980b9; font-weight: bold; margin-bottom: 20px; }
+    #loading { text-align: center; font-size: 1.1em; color: #2980b9; font-weight: bold; margin-bottom: 20px; }
+
+    /* MOBİL İÇİN ÖZEL İNCE AYARLAR (Ekran 600px'den küçükse devreye girer) */
+    @media (max-width: 600px) {
+        body { padding: 10px; } /* Kenar boşluklarını daralt */
+        .question { padding: 12px; }
+        button.opt-btn { padding: 10px; font-size: 0.95em; } /* Şıkları biraz daha derli toplu yap */
+        #pageInfo { font-size: 0.9em; }
+    }
 </style>
 </head>
 
@@ -39,9 +100,9 @@
 <div id="quiz"></div>
 
 <div class="pagination" id="paginationControls" style="display: none;">
-    <button class="page-btn" onclick="prevPage()">Önceki Sayfa</button>
-    <span id="pageInfo" style="margin: 0 15px; font-weight: bold;"></span>
-    <button class="page-btn" onclick="nextPage()">Sonraki Sayfa</button>
+    <button class="page-btn" onclick="prevPage()">Önceki</button>
+    <span id="pageInfo" style="font-weight: bold;"></span>
+    <button class="page-btn" onclick="nextPage()">Sonraki</button>
 </div>
 
 <script>
@@ -70,7 +131,7 @@ window.onload = async function() {
         parseQuestions(fullText);
         
         document.getElementById("loading").style.display = "none";
-        document.getElementById("paginationControls").style.display = "block";
+        document.getElementById("paginationControls").style.display = "flex";
         
         renderPage();
 
@@ -87,7 +148,6 @@ window.onload = async function() {
 function parseQuestions(text) {
     questions = [];
     
-    // 1. Gerçek Cevap Anahtarını PDF'ten Çek
     const answerKeyMatch = text.match(/Answer Key\s*([\s\S]+)$/i);
     const answerMap = {};
     if (answerKeyMatch) {
@@ -99,7 +159,6 @@ function parseQuestions(text) {
         }
     }
 
-    // 2. Soruları Ayrıştır
     const qRegex = /(\d+)\.\s(.*?)(?=\d+\.\s|$)/gs;
     let match;
     while ((match = qRegex.exec(text)) !== null) {
@@ -114,10 +173,9 @@ function parseQuestions(text) {
             id: qId, 
             question: qText.split("A)")[0].trim(),
             options: options,
-            answerKey: answerMap[qId] || null // Gerçek cevabı atıyoruz
+            answerKey: answerMap[qId] || null 
         });
     }
-    console.log("Bulunan Soru Sayısı:", questions.length);
 }
 
 function renderPage() {
@@ -135,9 +193,9 @@ function renderPage() {
         const div = document.createElement("div");
         div.className = "question";
 
-        let html = `<b style="font-size:1.1em; color:#2c3e50;">${q.id}. ${q.question}</b><br>`;
+        let html = `<b style="font-size:1.1em; color:#2c3e50; display:block; margin-bottom:10px;">${q.id}. ${q.question}</b>`;
 
-        html += `<img src="resimler/${q.id}.png" class="question-image" onerror="this.style.display='none'" alt="Soru ${q.id} Görseli"><br>`;
+        html += `<img src="resimler/${q.id}.png" class="question-image" onerror="this.style.display='none'" alt="Soru ${q.id} Görseli">`;
 
         q.options.forEach((opt) => {
             const optLetter = opt.match(/^([A-E])\)/)[1];
@@ -155,22 +213,21 @@ function renderPage() {
     }
 
     document.getElementById("pageInfo").innerText = `Sayfa ${currentPage + 1} / ${Math.ceil(questions.length / pageSize)}`;
-    window.scrollTo(0, 0); // Sayfa değiştiğinde en üste kaydır
+    window.scrollTo(0, 0); 
 }
 
 function checkAnswer(btn, selectedLetter, correctLetter) {
     const siblings = btn.parentElement.querySelectorAll('button');
     siblings.forEach(b => {
-        b.style.pointerEvents = 'none'; // Seçim yapıldıktan sonra kilitler
+        b.style.pointerEvents = 'none'; 
     });
 
     if (selectedLetter === correctLetter) {
         btn.classList.add("correct");
     } else {
         btn.classList.add("wrong");
-        // Yanlış cevap verildiğinde doğru olanı da yeşil gösterir
         siblings.forEach(b => {
-            if(b.innerText.startsWith(correctLetter)) {
+            if(b.innerText.trim().startsWith(correctLetter)) {
                 b.classList.add("correct");
             }
         });
