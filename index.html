@@ -131,35 +131,30 @@ window.onload = async function() {
             
             let textItems = content.items.map(item => item.str);
 
-            // --- YENİ: SAYFA NUMARASI (FOOTER/HEADER) TEMİZLEYİCİ ---
-            // Sayfanın en sonundaki (footer) sayfa numarasını bul ve sil
+            // Sayfa başı/sonu numara temizleyici
             while (textItems.length > 0) {
                 let last = textItems[textItems.length - 1].trim();
-                if (last === "") {
-                    textItems.pop(); // Boşlukları geç
-                } else if (/^\d+$/.test(last)) {
-                    textItems.pop(); // Rakamı (sayfa no) sil ve döngüyü kır
-                    break;
-                } else {
-                    break; // Metinse dokunma
-                }
+                if (last === "") textItems.pop();
+                else if (/^\d+$/.test(last)) { textItems.pop(); break; }
+                else break;
             }
-            
-            // Aynı işlemi sayfanın başındaki (header) sayfa numaraları için yap
             while (textItems.length > 0) {
                 let first = textItems[0].trim();
-                if (first === "") {
-                    textItems.shift();
-                } else if (/^\d+$/.test(first)) {
-                    textItems.shift();
-                    break;
-                } else {
-                    break;
-                }
+                if (first === "") textItems.shift();
+                else if (/^\d+$/.test(first)) { textItems.shift(); break; }
+                else break;
             }
-            // --------------------------------------------------------
 
-            // Senin geliştirdiğin mükemmel join ve XML boşluk düzeltmesi
+            // YENİ DÜZELTME: Soru numaralarının "Week 1" gibi önceki kelimelerle birleşip "11" olmasını engeller
+            textItems = textItems.map(str => {
+                // Eğer metin "1." veya "A)" gibi formatlarla başlıyorsa başına güvenli bir boşluk koy
+                if (/^\d+\./.test(str.trim()) || /^[A-E]\)/.test(str.trim())) {
+                    return " " + str;
+                }
+                return str;
+            });
+
+            // Senin XML boşluk düzeltmeli efsanevi join() mantığın
             const text = textItems.join("")
                 .replace(/\s+</g, "<")
                 .replace(/>\s+/g, ">");
@@ -203,7 +198,6 @@ function parseQuestions(text) {
         const qId = match[1]; 
         const qText = match[2];
 
-        // Senin kullandığın güçlü Regex
         const options = qText.match(/[A-E]\)[\s\S]*?(?=[A-E]\)|$)/g);
 
         if (!options) continue;
@@ -242,7 +236,6 @@ function renderPage() {
             if (!letterMatch) return;
 
             const optLetter = letterMatch[1];
-            // Fazladan sağ/sol boşlukları temizle
             const cleanOpt = opt.trim();
             const safeOpt = escapeHTML(cleanOpt);
 
