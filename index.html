@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>XML & Web Services Deneme Sınavı</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; }
+    .question { margin-bottom: 25px; padding: 15px; border: 1px solid #ddd; background-color: white; border-radius: 8px; }
+    
+    /* Gelişmiş Şık Butonları */
+    button.opt-btn { 
+        display: block; width: 100%; text-align: left; margin: 8px 0; padding: 12px; 
+        cursor: pointer; border: 2px solid #ccc; border-radius: 6px; background-color: #eee; transition: 0.2s; font-size: 1em;
+    }
+    button.opt-btn:hover { background-color: #e0e0e0; }
+    
+    .correct { background-color: #c8f7c5 !important; border-color: #2ecc71 !important; color: #155724; font-weight: bold;}
+    .wrong { background-color: #f7c5c5 !important; border-color: #e74c3c !important; color: #721c24;}
+    
+    .pagination { margin-top: 20px; text-align: center; }
+    button.page-btn { margin: 5px; padding: 10px 15px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background-color: #2c3e50; color: white; }
+    button.page-btn:hover { background-color: #34495e; }
+    
+    .question-image { max-width: 100%; height: auto; margin: 15px 0; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    
+    #loading { text-align: center; font-size: 1.2em; color: #2980b9; font-weight: bold; margin-bottom: 20px; }
+</style>
+</head>
+
+<body>
+
+<h2>XML & Web Services Midterm Sınavı</h2>
+
+<div id="loading">PDF otomatik olarak yükleniyor ve okunuyor, lütfen bekleyin...</div>
+
+<div id="quiz"></div>
+
+<div class="pagination" id="paginationControls" style="display: none;">
+    <button class="page-btn" onclick="prevPage()">Önceki Sayfa</button>
+    <span id="pageInfo" style="margin: 0 15px; font-weight: bold;"></span>
+    <button class="page-btn" onclick="nextPage()">Sonraki Sayfa</button>
+</div>
+
+<script>
+let questions = [];
+let currentPage = 0;
+const pageSize = 10; 
+
+const pdfFileName = "XML_Web_Services_Midterm_Practice_Weeks_1_7.pdf";
+
+window.onload = async function() {
+    try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const loadingTask = pdfjsLib.getDocument(pdfFileName);
+        const pdf = await loadingTask.promise;
+
+        let fullText = "";
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            const text = content.items.map(item => item.str).join(" ");
+            fullText += text + "\n";
+        }
+
+        parseQuestions(fullText);
+        
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("paginationControls").style.display = "block";
+        
+        renderPage();
+
+    } catch (error) {
+        console.error("PDF Yükleme Hatası:", error);
+        document.getElementById("loading").innerHTML = `
+            <span style="color:#e74c3c;">
+                Hata: PDF yüklenemedi!<br><br>
+                Lütfen 'XML_Web_Services_Midterm_Practice_Weeks_1_7.pdf' dosyasının GitHub deponda olduğundan emin ol.
+            </span>`;
+    }
+};
+
+function parseQuestions(text) {
+    questions = [];
+    
+    // 1. Gerçek Cevap Anahtarını PDF'ten Çek
+    const answerKeyMatch = text.match(/Answer Key\s*([\s\S]+)$/i);
+    const answerMap = {};
+    if (answerKeyMatch) {
+        const keyText = answerKeyMatch[1];
+        const keyRegex = /(\d+)\.\s*([A-E])/g; 
+        let match;
+        while ((match = keyRegex.exec(keyText)) !== null) {
+            answerMap[match[1]] = match[2];
+        }
+    }
+
+    // 2. Soruları Ayrıştır
+    const qRegex = /(\d+)\.\s(.*?)(?=\d+\.\s|$)/gs;
+    let match;
+    while ((match = qRegex.exec(text)) !== null) {
+        const qId = match[1]; 
+        const qText = match[2];
+
+        const options = qText.match(/[A-E]\)\s.*?(?=[A-E]\)|$)/g);
+
+        if (!options) continue;
+
+        questions.push({
+            id: qId, 
+            question: qText.split("A)")[0].trim(),
+            options: options,
+            answerKey: answerMap[qId] || null // Gerçek cevabı atıyoruz
+        });
+    }
+    console.log("Bulunan Soru Sayısı:", questions.length);
+}
+
+function renderPage() {
+    const quizDiv = document.getElementById("quiz");
+    quizDiv.innerHTML = "";
+
+    if (questions.length === 0) return;
+
+    let start = currentPage * pageSize;
+    let end = Math.min(start + pageSize, questions.length);
+
+    for (let i = start; i < end; i++) {
+        const q = questions[i];
+
+        const div = document.createElement("div");
+        div.className = "question";
+
+        let html = `<b style="font-size:1.1em; color:#2c3e50;">${q.id}. ${q.question}</b><br>`;
+
+        html += `<img src="resimler/${q.id}.png" class="question-image" onerror="this.style.display='none'" alt="Soru ${q.id} Görseli"><br>`;
+
+        q.options.forEach((opt) => {
+            const optLetter = opt.match(/^([A-E])\)/)[1];
+            html += `<button class="opt-btn" onclick="checkAnswer(this, '${optLetter}', '${q.answerKey}')">
+                        ${opt}
+                     </button>`;
+        });
+
+        if (!q.answerKey) {
+            html += `<div style="color:red; margin-top:10px; font-size:0.9em;">Uyarı: Cevap anahtarı okunamadı.</div>`;
+        }
+
+        div.innerHTML = html;
+        quizDiv.appendChild(div);
+    }
+
+    document.getElementById("pageInfo").innerText = `Sayfa ${currentPage + 1} / ${Math.ceil(questions.length / pageSize)}`;
+    window.scrollTo(0, 0); // Sayfa değiştiğinde en üste kaydır
+}
+
+function checkAnswer(btn, selectedLetter, correctLetter) {
+    const siblings = btn.parentElement.querySelectorAll('button');
+    siblings.forEach(b => {
+        b.style.pointerEvents = 'none'; // Seçim yapıldıktan sonra kilitler
+    });
+
+    if (selectedLetter === correctLetter) {
+        btn.classList.add("correct");
+    } else {
+        btn.classList.add("wrong");
+        // Yanlış cevap verildiğinde doğru olanı da yeşil gösterir
+        siblings.forEach(b => {
+            if(b.innerText.startsWith(correctLetter)) {
+                b.classList.add("correct");
+            }
+        });
+    }
+}
+
+function nextPage() {
+    if ((currentPage + 1) * pageSize < questions.length) {
+        currentPage++;
+        renderPage();
+    }
+}
+
+function prevPage() {
+    if (currentPage > 0) {
+        currentPage--;
+        renderPage();
+    }
+}
+</script>
+
+</body>
+</html>
