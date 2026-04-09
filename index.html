@@ -107,7 +107,6 @@ const pageSize = 10;
 
 const pdfFileName = "XML_Web_Services_Midterm_Practice_Weeks_1_7.pdf";
 
-// XML Kodlarını HTML'de düz yazı olarak göstermek için gereken güvenlik filtresi
 function escapeHTML(str) {
     if (!str) return "";
     return str.replace(/&/g, '&amp;')
@@ -129,7 +128,12 @@ window.onload = async function() {
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
-            const text = content.items.map(item => item.str).join(" ");
+
+            // ✅ FIX 1: join("") + XML boşluk düzeltme
+            const text = content.items.map(item => item.str).join("")
+                .replace(/\s+</g, "<")
+                .replace(/>\s+/g, ">");
+
             fullText += text + "\n";
         }
 
@@ -144,8 +148,7 @@ window.onload = async function() {
         console.error("PDF Yükleme Hatası:", error);
         document.getElementById("loading").innerHTML = `
             <span style="color:#e74c3c;">
-                Hata: PDF yüklenemedi!<br><br>
-                Lütfen 'XML_Web_Services_Midterm_Practice_Weeks_1_7.pdf' dosyasının GitHub deponda olduğundan emin ol.
+                Hata: PDF yüklenemedi!
             </span>`;
     }
 };
@@ -170,7 +173,8 @@ function parseQuestions(text) {
         const qId = match[1]; 
         const qText = match[2];
 
-        const options = qText.match(/[A-E]\)\s.*?(?=[A-E]\)|$)/g);
+        // ✅ FIX 2: güçlü regex
+        const options = qText.match(/[A-E]\)\s[\s\S]*?(?=\s[A-E]\)|$)/g);
 
         if (!options) continue;
 
@@ -198,23 +202,27 @@ function renderPage() {
         const div = document.createElement("div");
         div.className = "question";
 
-        // Soruyu escapeHTML filtresinden geçirerek yazdırıyoruz
         const safeQuestion = escapeHTML(q.question);
         let html = `<b style="font-size:1.1em; color:#2c3e50; display:block; margin-bottom:10px;">${q.id}. ${safeQuestion}</b>`;
 
-        html += `<img src="resimler/${q.id}.png" class="question-image" onerror="this.style.display='none'" alt="Soru ${q.id} Görseli">`;
+        html += `<img src="resimler/${q.id}.png" class="question-image" onerror="this.style.display='none'">`;
 
         q.options.forEach((opt) => {
-            const optLetter = opt.match(/^([A-E])\)/)[1];
-            // Şıkları da escapeHTML filtresinden geçirerek yazdırıyoruz
+
+            // ✅ FIX 3: güvenli letter parsing
+            const letterMatch = opt.match(/^([A-E])\)/);
+            if (!letterMatch) return;
+
+            const optLetter = letterMatch[1];
             const safeOpt = escapeHTML(opt);
+
             html += `<button class="opt-btn" onclick="checkAnswer(this, '${optLetter}', '${q.answerKey}')">
                         ${safeOpt}
                      </button>`;
         });
 
         if (!q.answerKey) {
-            html += `<div style="color:red; margin-top:10px; font-size:0.9em;">Uyarı: Cevap anahtarı okunamadı.</div>`;
+            html += `<div style="color:red; margin-top:10px; font-size:0.9em;">Cevap anahtarı bulunamadı</div>`;
         }
 
         div.innerHTML = html;
@@ -227,18 +235,14 @@ function renderPage() {
 
 function checkAnswer(btn, selectedLetter, correctLetter) {
     const siblings = btn.parentElement.querySelectorAll('button');
-    siblings.forEach(b => {
-        b.style.pointerEvents = 'none'; 
-    });
+    siblings.forEach(b => b.style.pointerEvents = 'none');
 
     if (selectedLetter === correctLetter) {
         btn.classList.add("correct");
     } else {
         btn.classList.add("wrong");
         siblings.forEach(b => {
-            // escapeHTML nedeniyle b.innerText artık '&lt;a&gt;' şeklinde dönebilir. 
-            // Şıkkın sadece "A)" gibi ilk 2 karakterini kontrol etmek daha güvenli:
-            if(b.innerText.trim().startsWith(correctLetter + ")")) {
+            if (b.innerText.trim().startsWith(correctLetter + ")")) {
                 b.classList.add("correct");
             }
         });
